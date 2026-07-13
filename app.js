@@ -1,5 +1,5 @@
 const CONFIG = {
-    API_URL: 'https://api.onega.by:8443/buh_test/hs/exchanges',
+    API_URL: 'https://192.168.0.3:443/buh_test/hs/exchanges',
     // Схема парсинга
     packingScheme: {
         fields: [
