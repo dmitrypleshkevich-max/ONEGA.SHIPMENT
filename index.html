@@ -9,24 +9,26 @@
 <body>
     <div id="app">
         <div id="screen-auth" class="screen">
-            <h2>Вход</h2>
-            <input type="text" id="login" placeholder="Логин">
+            <h2>Авторизация</h2>
+            <input type="text" id="login" placeholder="Логин" autocomplete="off">
             <input type="password" id="password" placeholder="Пароль">
-            <button id="btn-login">Подключиться</button>
+            <button onclick="auth()">Подключиться</button>
         </div>
 
         <div id="screen-task" class="screen" style="display:none;">
-            <h2>Задание</h2>
-            <input type="text" id="order-number" placeholder="Номер заказа">
-            <button id="btn-get-task">Получить задание</button>
+            <h2>Введите номер задания</h2>
+            <input type="text" id="order-number" placeholder="Номер заказа" autocomplete="off">
+            <button onclick="getTask()">Получить план</button>
         </div>
 
         <div id="screen-scan" class="screen" style="display:none;">
-            <h2>Сборка</h2>
+            <h3 id="item-name">Сканируйте паллету</h3>
             <input type="text" id="pallet-input" placeholder="Паллетный лист" autofocus>
             <input type="text" id="sscc-input" placeholder="SSCC код" style="display:none;">
-            <div id="stats"></div>
-            <button id="btn-send">Отправить результат</button>
+            <div id="stats">
+                <p>Всего паллет: <span id="stat-count">0</span></p>
+            </div>
+            <button onclick="confirmShipment()">Отправить отгрузку</button>
         </div>
     </div>
     <script src="app.js"></script>
