@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONEGA Registrator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="screen-auth" class="screen">
+            <h2>Вход</h2>
+            <input type="text" id="login" placeholder="Логин">
+            <input type="password" id="password" placeholder="Пароль">
+            <button id="btn-login">Подключиться</button>
+        </div>
+
+        <div id="screen-task" class="screen" style="display:none;">
+            <h2>Задание</h2>
+            <input type="text" id="order-number" placeholder="Номер заказа">
+            <button id="btn-get-task">Получить задание</button>
+        </div>
+
+        <div id="screen-scan" class="screen" style="display:none;">
+            <h2>Сборка</h2>
+            <input type="text" id="pallet-input" placeholder="Паллетный лист" autofocus>
+            <input type="text" id="sscc-input" placeholder="SSCC код" style="display:none;">
+            <div id="stats"></div>
+            <button id="btn-send">Отправить результат</button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
