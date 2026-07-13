@@ -1,0 +1,5 @@
+body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+.screen { background: #fff; padding: 20px; border-radius: 8px; max-width: 400px; margin: auto; }
+input { width: 100%; padding: 15px; margin: 10px 0; box-sizing: border-box; font-size: 18px; }
+button { width: 100%; padding: 15px; background: #28a745; color: white; border: none; font-size: 18px; cursor: pointer; }
+#stats { margin: 20px 0; font-weight: bold; }
