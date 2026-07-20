@@ -447,8 +447,8 @@ function saveScan(sscc = '') {
 
     if (sscc && sscc.trim()) {
         const cleanSSCC = sscc.replace(/\s/g, '');
-        if (!/^\d{18}$/.test(cleanSSCC)) {
-            showError('scan-error', 'SSCC должен содержать 18 цифр!');
+        if (!/^\d{20}$/.test(cleanSSCC)) {
+            showError('scan-error', 'SSCC должен содержать 20 цифр!');
             document.getElementById('sscc-input').value = '';
             document.getElementById('sscc-input').focus();
             return;
