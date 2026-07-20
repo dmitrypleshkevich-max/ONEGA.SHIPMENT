@@ -1,10 +1,13 @@
 {
-  "totalLength": { "min": 50, "max": 65 },
+  "totalLength": { "min": 47, "max": 65 },
   "fields": [
-    { "name": "ContainerID", "start": 5, "length": 5 },
-    { "name": "GoodId", "start": 21, "length": 10 },
-    { "name": "Date", "start": 31, "length": 6 },
-    { "name": "batchID", "start": 38, "length": 4 },
-    { "name": "Qty", "start": 46, "length": 4 }
+    { "name": "ContainerID", "start": 2, "length": 5 },
+    { "name": "GoodId", "start": 10, "length": 13 },
+    { "name": "Date", "start": 25, "length": 6 },
+    { "name": "batchID", "start": 33, "length": 4 },
+    { "name": "Qty", "start": 39, "length": 4 },
+    { "name": "BoxQty", "start": 45, "length": 2 }
   ]
 }
+
+
