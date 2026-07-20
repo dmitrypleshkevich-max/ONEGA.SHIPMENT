@@ -3,34 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ONEGA Registrator</title>
+    <title>ONEGA.SHIPMENT</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="app">
+
+        <!-- Экран 1: Авторизация -->
         <div id="screen-auth" class="screen">
             <h2>Авторизация</h2>
             <input type="text" id="login" placeholder="Логин" autocomplete="off">
             <input type="password" id="password" placeholder="Пароль">
             <button onclick="auth()">Подключиться</button>
+            <div id="auth-error" class="error"></div>
         </div>
 
+        <!-- Экран 2: Номер задания -->
         <div id="screen-task" class="screen" style="display:none;">
             <h2>Введите номер задания</h2>
             <input type="text" id="order-number" placeholder="Номер заказа" autocomplete="off">
             <button onclick="getTask()">Получить план</button>
+            <div id="task-error" class="error"></div>
         </div>
 
+        <!-- Экран 3: Сканирование -->
         <div id="screen-scan" class="screen" style="display:none;">
             <h3 id="item-name">Сканируйте паллету</h3>
+            
             <input type="text" id="pallet-input" placeholder="Паллетный лист" autofocus>
-            <input type="text" id="sscc-input" placeholder="SSCC код" style="display:none;">
+            <input type="text" id="sscc-input" placeholder="SSCC код (18 цифр)" style="display:none;">
+            
+            <button id="add-btn" onclick="addScan()" class="add-btn">Добавить</button>
+            
+            <!-- БЛОК ОШИБОК ПОД КНОПКОЙ -->
+            <div id="scan-error" class="error"></div>
+            
             <div id="stats">
-                <p>Всего паллет: <span id="stat-count">0</span></p>
+                <div class="stat-total">
+                    <span class="stat-label">Всего штук:</span>
+                    <span class="stat-value"><span id="stat-qty-current">0</span> из <span id="stat-qty-total">0</span></span>
+                </div>
+                
+                <div id="stat-goods-list" class="stat-goods-list"></div>
+                
+                <div class="stat-summary">
+                    <span>Всего паллет: <strong id="stat-pallets">0</strong></span>
+                    <span>Всего SSCC: <strong id="stat-sscc">0</strong></span>
+                </div>
             </div>
-            <button onclick="confirmShipment()">Отправить отгрузку</button>
+
+            <div id="scan-list" class="scan-list"></div>
+
+            <button id="send-btn" onclick="confirmShipment()" class="send-btn">Отправить задание</button>
         </div>
     </div>
+
     <script src="app.js"></script>
 </body>
 </html>
