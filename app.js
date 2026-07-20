@@ -1,4 +1,5 @@
 // --- КОНФИГУРАЦИЯ ---
+
 const CONFIG = {
     API_URL: 'https://api.onega.by:8443/buh_test/hs/exchanges',
     packingScheme: {
