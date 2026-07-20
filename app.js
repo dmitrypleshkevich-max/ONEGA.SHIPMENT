@@ -281,6 +281,25 @@ function isPalletCodeUnique(code) {
     return !state.scans.some(scan => scan.cleanRaw === cleanCode);
 }
 
+// --- НОРМАЛИЗАЦИЯ НОМЕРА ЗАКАЗА ---
+function normalizeOrderNumber(input) {
+    // Удаляем все пробелы и лишние символы, оставляем только цифры
+    let clean = input.replace(/\s/g, '').replace(/[^0-9]/g, '');
+    
+    if (!clean) return '';
+    
+    if (clean.length < 9) {
+        // Добиваем нулями слева до 9 символов
+        return clean.padStart(9, '0');
+    } else if (clean.length > 9) {
+        // Берем последние 9 символов
+        return clean.slice(-9);
+    } else {
+        // Ровно 9 символов - возвращаем как есть
+        return clean;
+    }
+}
+
 // --- АВТОРИЗАЦИЯ ---
 async function auth() {
     clearErrors();
@@ -532,9 +551,17 @@ document.addEventListener('DOMContentLoaded', function() {
 // --- API ---
 async function getTask() {
     clearErrors();
-    const orderNumber = document.getElementById('order-number').value.trim();
-
-    if (!orderNumber) return showError('task-error', 'Введите номер заказа');
+    
+    // ★★★ ИСПОЛЬЗУЕМ НОРМАЛИЗАЦИЮ ★★★
+    const rawOrderNumber = document.getElementById('order-number').value.trim();
+    const orderNumber = normalizeOrderNumber(rawOrderNumber);
+    
+    if (!orderNumber) {
+        return showError('task-error', 'Введите номер заказа (только цифры)');
+    }
+    
+    console.log(`📝 Номер заказа: "${rawOrderNumber}" → нормализован: "${orderNumber}"`);
+    
     if (!bearerToken) return showError('task-error', 'Токен отсутствует');
 
     try {
@@ -580,7 +607,11 @@ async function getTask() {
 async function confirmShipment() {
     clearErrors();
     if (!bearerToken) return showError('scan-error', 'Токен отсутствует');
-    if (!state.orderNumber) return showError('scan-error', 'Номер заказа неизвестен');
+    
+    // ★★★ НОРМАЛИЗУЕМ НОМЕР ЗАКАЗА ПРИ ОТПРАВКЕ ★★★
+    const orderNumber = normalizeOrderNumber(state.orderNumber || '');
+    if (!orderNumber) return showError('scan-error', 'Номер заказа неизвестен');
+    
     if (state.scans.length === 0) return showError('scan-error', 'Нет данных для отправки');
     
     if (isWaitingForSSCC) {
@@ -592,7 +623,6 @@ async function confirmShipment() {
     const totalExpectedQty = state.totalExpectedQty || 0;
     
     if (totalScannedQty < totalExpectedQty) {
-        // Неполная сборка - спрашиваем подтверждение
         const confirmed = confirm(
             `⚠️ Внимание!\n\n` +
             `Заказ собран не полностью:\n` +
@@ -603,16 +633,13 @@ async function confirmShipment() {
         );
         
         if (!confirmed) {
-            // Пользователь отказался - возвращаемся к сканированию
             document.getElementById('pallet-input').focus();
             showError('scan-error', 'ℹ️ Сборка продолжается. Отсканируйте остальные паллеты.');
             return;
         }
     } else if (totalScannedQty === totalExpectedQty) {
-        // Все собрано - показываем сообщение
         showSuccess('scan-error', `✅ Заказ собран полностью! ${totalScannedQty} из ${totalExpectedQty} шт. Отправляем...`);
     } else {
-        // Перебор (не должно произойти из-за проверки в addScan, но на всякий случай)
         const confirmed = confirm(
             `⚠️ Внимание!\n\n` +
             `Собрано больше, чем в заказе:\n` +
@@ -640,7 +667,7 @@ async function confirmShipment() {
     }));
 
     const payload = {
-        order_number: state.orderNumber,
+        order_number: orderNumber, // ★★★ ИСПОЛЬЗУЕМ НОРМАЛИЗОВАННЫЙ НОМЕР ★★★
         pallets: palletsPayload
     };
 
