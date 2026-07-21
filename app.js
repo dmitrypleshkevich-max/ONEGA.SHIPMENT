@@ -1,7 +1,8 @@
 // --- КОНФИГУРАЦИЯ ---
 
 const CONFIG = {
-    API_URL: 'https://api.onega.by:8443/buh_test/hs/exchanges',
+    //API_URL: 'https://api.onega.by:8443/buh_test/hs/exchanges',
+        API_URL: 'https://192.168.0.3:443/buh_test/hs/exchanges',
     packingScheme: {
         "totalLength": { "min": 47, "max": 65 },
         "fields": [
