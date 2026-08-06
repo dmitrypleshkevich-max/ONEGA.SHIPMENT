@@ -1,0 +1,6 @@
+[
+  { "name": "основной сервер (внешее подлючение)", "url": "https://api.onega.by:8443/buh_azbuka/hs/exchanges" },
+  { "name": "основной сервер (внутреннее подлючение)", "url": "https://192.168.0.3:443/buh_azbuka/hs/exchanges" },
+  { "name": "тестовый сервер (внутреннее подключение)", "url": "https://192.168.0.3:443/buh_test/hs/exchanges" },
+  { "name": "тестовый сервер (внешнее подключение)", "url": "https://api.onega.by:8443/buh_test/hs/exchanges" }
+]

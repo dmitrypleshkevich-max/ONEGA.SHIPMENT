@@ -1,9 +1,8 @@
 // --- КОНФИГУРАЦИЯ ---
 
-const CONFIG = {
-    //API_URL: 'https://api.onega.by:8443/buh_test/hs/exchanges',
-    //    API_URL: 'https://192.168.0.3:443/buh_test/hs/exchanges',
-        API_URL: 'https://api.onega.by:8443/buh_azbuka/hs/exchanges',
+let CONFIG = {
+    // API_URL теперь будет динамическим
+    API_URL: '',
     packingScheme: {
         "totalLength": { "min": 47, "max": 65 },
         "fields": [
@@ -27,6 +26,11 @@ let state = {
 };
 let bearerToken = null;
 let isWaitingForSSCC = false;
+let currentServerName = '';
+let serverList = [];
+
+// --- ЗАЩИТА ОТ ДУБЛИРОВАНИЯ ОТПРАВКИ ---
+let isSending = false;
 
 // --- УТИЛИТЫ ---
 function showError(id, msg) { 
@@ -59,6 +63,149 @@ function clearErrors() {
         e.style.background = '#fff0f0';
         e.style.borderColor = '#ffcdd2';
     });
+}
+
+// --- ЗАГРУЗКА СПИСКА СЕРВЕРОВ ---
+async function loadServers() {
+    try {
+        const response = await fetch('servers.json');
+        if (response.ok) {
+            serverList = await response.json();
+            console.log("📋 Загружен список серверов:", serverList);
+            return serverList.length > 0;
+        } else {
+            console.error("Не удалось загрузить servers.json");
+            return false;
+        }
+    } catch (e) {
+        console.error("Ошибка загрузки servers.json:", e);
+        return false;
+    }
+}
+
+// --- ПОИСК РАБОТАЮЩЕГО СЕРВЕРА ---
+async function findWorkingServer(username, password) {
+    if (serverList.length === 0) {
+        throw new Error('Нет доступных серверов в конфигурации');
+    }
+
+    // Показываем сообщение о поиске
+    showError('auth-error', '⏳ Поиск доступного сервера...');
+
+    for (let i = 0; i < serverList.length; i++) {
+        const server = serverList[i];
+        console.log(`🔄 Пробуем подключиться к ${server.name} (${server.url})...`);
+        
+        try {
+            // Создаем AbortController для таймаута
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 секунд таймаут
+            
+            const response = await fetch(`${server.url}/auth`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+                // Сервер работает и авторизация успешна
+                CONFIG.API_URL = server.url;
+                currentServerName = server.name;
+                bearerToken = result.token;
+                
+                console.log(`✅ Подключено к серверу: ${server.name}`);
+                showServerConnectionMessage(server.name);
+                
+                return true;
+            } else if (response.ok && !result.success) {
+                // Сервер работает, но авторизация не удалась
+                // Это может быть из-за неверных логина/пароля
+                console.log(`❌ Авторизация на ${server.name} не удалась: ${result.error || 'Неизвестная ошибка'}`);
+                
+                // Если это был последний сервер, показываем ошибку авторизации
+                if (i === serverList.length - 1) {
+                    throw new Error(result.error || 'Ошибка авторизации на всех серверах');
+                }
+                // Иначе пробуем следующий
+                continue;
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.log(`⏱️ Таймаут подключения к ${server.name}`);
+                showError('auth-error', `⏱️ ${server.name} не отвечает...`);
+            } else {
+                console.log(`❌ Ошибка подключения к ${server.name}:`, error.message);
+                showError('auth-error', `❌ ${server.name} недоступен`);
+            }
+            
+            // Если это был последний сервер, выбрасываем ошибку
+            if (i === serverList.length - 1) {
+                throw new Error('Не удалось подключиться ни к одному серверу');
+            }
+            // Иначе пробуем следующий
+            continue;
+        }
+    }
+    
+    throw new Error('Не удалось подключиться ни к одному серверу');
+}
+
+// --- ПОКАЗ СООБЩЕНИЯ О ПОДКЛЮЧЕНИИ ---
+function showServerConnectionMessage(serverName) {
+    // Создаем всплывающее сообщение
+    const message = document.createElement('div');
+    message.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #28a745;
+        color: white;
+        padding: 15px 30px;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: bold;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: slideDown 0.5s ease-out;
+        max-width: 90%;
+        text-align: center;
+    `;
+    message.textContent = `✅ Подключено к "${serverName}"`;
+    
+    // Добавляем анимацию
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(message);
+    
+    // Удаляем через 3 секунды
+    setTimeout(() => {
+        message.style.opacity = '0';
+        message.style.transition = 'opacity 0.5s';
+        setTimeout(() => {
+            if (message.parentNode) {
+                message.parentNode.removeChild(message);
+            }
+        }, 500);
+    }, 3000);
 }
 
 // --- ВОСПРОИЗВЕДЕНИЕ ЗВУКА ---
@@ -161,7 +308,6 @@ function updateStatsUI() {
         const div = document.createElement('div');
         div.className = 'stat-goods-item';
         
-        // ★★★ ОПРЕДЕЛЯЕМ ЦВЕТ ★★★
         let colorStyle = '';
         let progressText = '';
         
@@ -169,16 +315,13 @@ function updateStatsUI() {
             const progress = stat.totalQty > 0 ? Math.round((stat.qty / stat.totalQty) * 100) : 0;
             
             if (progress === 100) {
-                // ✅ 100% - зеленый
                 colorStyle = 'color: #28a745; font-weight: bold;';
                 progressText = `${stat.pallets} пал, ${stat.qty} шт из ${stat.totalQty} шт (✅ 100%)`;
             } else {
-                // ⚫ 1-99% - обычный
                 colorStyle = 'color: #333;';
                 progressText = `${stat.pallets} пал, ${stat.qty} шт из ${stat.totalQty} шт (${progress}%)`;
             }
         } else {
-            // 🔘 0% - серый
             colorStyle = 'color: #999;';
             progressText = `0 пал, 0 шт из ${planItem.quantity} шт (0%)`;
         }
@@ -313,26 +456,18 @@ async function auth() {
     }
 
     try {
-        const response = await fetch(`${CONFIG.API_URL}/auth`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
-        });
-
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-            bearerToken = result.token;
+        // Пробуем подключиться к серверам
+        const connected = await findWorkingServer(username, password);
+        
+        if (connected) {
             console.log("✅ Успешная авторизация, токен получен");
             document.getElementById('screen-auth').style.display = 'none';
             document.getElementById('screen-task').style.display = 'block';
             document.getElementById('order-number').focus();
-        } else {
-            showError('auth-error', result.error || 'Ошибка авторизации');
         }
-    } catch (e) {
-        console.error("Ошибка сети:", e);
-        showError('auth-error', 'Нет связи с сервером');
+    } catch (error) {
+        console.error("Ошибка авторизации:", error);
+        showError('auth-error', error.message || 'Ошибка авторизации');
     }
 }
 
@@ -548,6 +683,31 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // ★★★ ЗАЩИТА ОТ ДВОЙНОГО КЛИКА НА КНОПКЕ ОТПРАВКИ ★★★
+    const sendBtn = document.getElementById('send-btn');
+    if (sendBtn) {
+        // Предотвращаем множественные клики
+        sendBtn.addEventListener('click', function(e) {
+            if (this.disabled || isSending) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+        
+        // Защита от двойного клика
+        let lastClickTime = 0;
+        sendBtn.addEventListener('click', function(e) {
+            const now = Date.now();
+            if (now - lastClickTime < 500) { // 500ms между кликами
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+            lastClickTime = now;
+        });
+    }
 });
 
 // --- API ---
@@ -606,76 +766,113 @@ async function getTask() {
     }
 }
 
+// --- ОТПРАВКА ПОДТВЕРЖДЕНИЯ СБОРКИ ---
 async function confirmShipment() {
     clearErrors();
-    if (!bearerToken) return showError('scan-error', 'Токен отсутствует');
     
-    // ★★★ НОРМАЛИЗУЕМ НОМЕР ЗАКАЗА ПРИ ОТПРАВКЕ ★★★
+    // ★★★ БЛОКИРУЕМ ПОВТОРНУЮ ОТПРАВКУ ★★★
+    if (isSending) {
+        console.warn("⛔ Отправка уже выполняется, пропускаем");
+        showError('scan-error', '⏳ Отправка уже выполняется, подождите...');
+        return;
+    }
+    
+    // Получаем кнопку ДО начала блокировки
+    const sendBtn = document.getElementById('send-btn');
+    
+    // Проверки перед блокировкой
+    if (!bearerToken) {
+        showError('scan-error', 'Токен отсутствует');
+        return;
+    }
+    
     const orderNumber = normalizeOrderNumber(state.orderNumber || '');
-    if (!orderNumber) return showError('scan-error', 'Номер заказа неизвестен');
+    if (!orderNumber) {
+        showError('scan-error', 'Номер заказа неизвестен');
+        return;
+    }
     
-    if (state.scans.length === 0) return showError('scan-error', 'Нет данных для отправки');
+    if (state.scans.length === 0) {
+        showError('scan-error', 'Нет данных для отправки');
+        return;
+    }
     
     if (isWaitingForSSCC) {
-        return showError('scan-error', 'Сначала завершите ввод SSCC для текущей паллеты');
+        showError('scan-error', 'Сначала завершите ввод SSCC для текущей паллеты');
+        return;
     }
 
-    // ★★★ ПРОВЕРКА: ВСЕ ЛИ СОБРАНО? ★★★
-    const totalScannedQty = state.scans.reduce((s, item) => s + parseInt(item.Qty || 0), 0);
-    const totalExpectedQty = state.totalExpectedQty || 0;
+    // ★★★ БЛОКИРУЕМ КНОПКУ ★★★
+    isSending = true;
+    if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.textContent = '⏳ Отправка...';
+        sendBtn.style.opacity = '0.5';
+        sendBtn.style.cursor = 'not-allowed';
+    }
     
-    if (totalScannedQty < totalExpectedQty) {
-        const confirmed = confirm(
-            `⚠️ Внимание!\n\n` +
-            `Заказ собран не полностью:\n` +
-            `Собрано: ${totalScannedQty} шт.\n` +
-            `Ожидается: ${totalExpectedQty} шт.\n` +
-            `Осталось: ${totalExpectedQty - totalScannedQty} шт.\n\n` +
-            `Действительно отправить неполный отчет о сборке?`
-        );
-        
-        if (!confirmed) {
-            document.getElementById('pallet-input').focus();
-            showError('scan-error', 'ℹ️ Сборка продолжается. Отсканируйте остальные паллеты.');
-            return;
-        }
-    } else if (totalScannedQty === totalExpectedQty) {
-        showSuccess('scan-error', `✅ Заказ собран полностью! ${totalScannedQty} из ${totalExpectedQty} шт. Отправляем...`);
-    } else {
-        const confirmed = confirm(
-            `⚠️ Внимание!\n\n` +
-            `Собрано больше, чем в заказе:\n` +
-            `Собрано: ${totalScannedQty} шт.\n` +
-            `Ожидается: ${totalExpectedQty} шт.\n` +
-            `Превышение: ${totalScannedQty - totalExpectedQty} шт.\n\n` +
-            `Действительно отправить?`
-        );
-        if (!confirmed) {
-            document.getElementById('pallet-input').focus();
-            return;
-        }
-    }
-
-    const palletsMap = {};
-    state.scans.forEach(scan => {
-        const key = scan.sscc || ''; 
-        if (!palletsMap[key]) palletsMap[key] = [];
-        palletsMap[key].push(scan.raw);
-    });
-
-    const palletsPayload = Object.keys(palletsMap).map(sscc => ({
-        sscc: sscc || '',
-        scans: palletsMap[sscc]
-    }));
-
-    const payload = {
-        order_number: orderNumber, // ★★★ ИСПОЛЬЗУЕМ НОРМАЛИЗОВАННЫЙ НОМЕР ★★★
-        pallets: palletsPayload
-    };
-
-    console.log("📤 Отправка данных:", JSON.stringify(payload, null, 2));
-
+    // Показываем статус
+    showSuccess('scan-error', '⏳ Отправка данных на сервер...');
+    
     try {
+        // ★★★ ПРОВЕРКА: ВСЕ ЛИ СОБРАНО? ★★★
+        const totalScannedQty = state.scans.reduce((s, item) => s + parseInt(item.Qty || 0), 0);
+        const totalExpectedQty = state.totalExpectedQty || 0;
+        
+        if (totalScannedQty < totalExpectedQty) {
+            const confirmed = confirm(
+                `⚠️ Внимание!\n\n` +
+                `Заказ собран не полностью:\n` +
+                `Собрано: ${totalScannedQty} шт.\n` +
+                `Ожидается: ${totalExpectedQty} шт.\n` +
+                `Осталось: ${totalExpectedQty - totalScannedQty} шт.\n\n` +
+                `Действительно отправить неполный отчет о сборке?`
+            );
+            
+            if (!confirmed) {
+                document.getElementById('pallet-input').focus();
+                showError('scan-error', 'ℹ️ Сборка продолжается. Отсканируйте остальные паллеты.');
+                return;
+            }
+        } else if (totalScannedQty === totalExpectedQty) {
+            showSuccess('scan-error', `✅ Заказ собран полностью! ${totalScannedQty} из ${totalExpectedQty} шт. Отправляем...`);
+        } else {
+            const confirmed = confirm(
+                `⚠️ Внимание!\n\n` +
+                `Собрано больше, чем в заказе:\n` +
+                `Собрано: ${totalScannedQty} шт.\n` +
+                `Ожидается: ${totalExpectedQty} шт.\n` +
+                `Превышение: ${totalScannedQty - totalExpectedQty} шт.\n\n` +
+                `Действительно отправить?`
+            );
+            if (!confirmed) {
+                document.getElementById('pallet-input').focus();
+                return;
+            }
+        }
+
+        // Формируем payload
+        const palletsMap = {};
+        state.scans.forEach(scan => {
+            const key = scan.sscc || ''; 
+            if (!palletsMap[key]) palletsMap[key] = [];
+            palletsMap[key].push(scan.raw);
+        });
+
+        const palletsPayload = Object.keys(palletsMap).map(sscc => ({
+            sscc: sscc || '',
+            scans: palletsMap[sscc]
+        }));
+
+        const payload = {
+            order_number: orderNumber,
+            pallets: palletsPayload
+        };
+
+        console.log("📤 Отправка данных:", JSON.stringify(payload, null, 2));
+        console.log(`📊 Отправляем ${palletsPayload.length} паллет`);
+
+        // ★★★ ОТПРАВЛЯЕМ ЗАПРОС ★★★
         const response = await fetch(`${CONFIG.API_URL}/shipmentconfirm`, {
             method: 'POST',
             headers: {
@@ -696,6 +893,7 @@ async function confirmShipment() {
             throw new Error(`Сервер вернул: ${responseText}`);
         }
 
+        // ★★★ ОБРАБАТЫВАЕМ ОТВЕТ ★★★
         if (response.ok && result.success) {
             state.scans = [];
             state.totalExpectedQty = 0;
@@ -708,7 +906,23 @@ async function confirmShipment() {
         }
     } catch (e) {
         console.error("Ошибка сети:", e);
-        showError('scan-error', `Нет связи с сервером: ${e.message}`);
+        showError('scan-error', `❌ Ошибка: ${e.message}`);
+    } finally {
+        // ★★★ ВСЕГДА РАЗБЛОКИРУЕМ КНОПКУ ★★★
+        isSending = false;
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Отправить задание';
+            sendBtn.style.opacity = '1';
+            sendBtn.style.cursor = 'pointer';
+        }
+        
+        // Если не было критической ошибки и кнопка не скрыта результатом
+        // то через 2 секунды очищаем сообщение
+        const resultBlock = document.getElementById('shipment-result');
+        if (!resultBlock) {
+            setTimeout(() => clearErrors(), 2000);
+        }
     }
 }
 
@@ -907,5 +1121,20 @@ function continueScanning() {
     updateStatsUI();
 }
 
-// Инициализация
-loadScheme();
+// --- ИНИЦИАЛИЗАЦИЯ ---
+async function init() {
+    // Загружаем список серверов
+    const serversLoaded = await loadServers();
+    if (!serversLoaded) {
+        showError('auth-error', '⚠️ Не найден файл servers.json или он пуст');
+        console.error('Не удалось загрузить список серверов');
+    }
+    
+    // Загружаем схему упаковки
+    await loadScheme();
+    
+    console.log("✅ Приложение инициализировано");
+}
+
+// Запускаем инициализацию
+init();Ы
