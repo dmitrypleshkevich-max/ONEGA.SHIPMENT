@@ -231,6 +231,15 @@ function playBeep() {
 }
 
 // --- ОБНОВЛЕНИЕ СТАТИСТИКИ ---
+function toggleGoodsList() {
+    const list = document.getElementById('stat-goods-list');
+    const btn = document.getElementById('toggle-goods-btn');
+    if (!list || !btn) return;
+    
+    const isHidden = list.classList.toggle('hidden');
+    btn.textContent = isHidden ? '▶' : '▼';
+}
+
 function updateStatsUI() {
     console.log("🔄 Обновление статистики...");
     console.log("state.totalExpectedQty:", state.totalExpectedQty);

@@ -21,7 +21,7 @@
         <!-- Экран 2: Номер задания -->
         <div id="screen-task" class="screen" style="display:none;">
             <h2>Введите номер задания</h2>
-            <input type="text" id="order-number" placeholder="Номер заказа" autocomplete="off">
+            <input type="text" id="order-number" placeholder="Номер заказа" inputmode="none" autocomplete="off">
             <button onclick="getTask()">Получить план</button>
             <div id="task-error" class="error"></div>
         </div>
@@ -30,8 +30,8 @@
         <div id="screen-scan" class="screen" style="display:none;">
             <h3 id="item-name">Сканируйте паллету</h3>
             
-            <input type="text" id="pallet-input" placeholder="Паллетный лист" autofocus>
-            <input type="text" id="sscc-input" placeholder="SSCC код (20 цифр)" style="display:none;">
+            <input type="text" id="pallet-input" placeholder="Паллетный лист" inputmode="none" autofocus>
+            <input type="text" id="sscc-input" placeholder="SSCC код (20 цифр)" inputmode="none" style="display:none;">
             
             <button id="add-btn" onclick="addScan()" class="add-btn">Добавить</button>
             
@@ -41,7 +41,10 @@
             <div id="stats">
                 <div class="stat-total">
                     <span class="stat-label">Всего штук:</span>
-                    <span class="stat-value"><span id="stat-qty-current">0</span> из <span id="stat-qty-total">0</span></span>
+                    <span class="stat-value">
+                        <span id="stat-qty-current">0</span> из <span id="stat-qty-total">0</span>
+                    </span>
+                    <button type="button" id="toggle-goods-btn" class="toggle-goods-btn" onclick="toggleGoodsList()">▼</button>
                 </div>
                 
                 <div id="stat-goods-list" class="stat-goods-list"></div>
